@@ -1,344 +1,177 @@
-class StaysDashboard {
-    constructor() {
-        this.config = window.CONFIG;
-        this.currentDate = new Date();
-        this.currentMonth = this.config.CURRENT_MONTH;
-        this.refreshInterval = null;
-        this.tooltip = document.getElementById('tooltip');
-        
-        this.init();
-    }
+// Stays Dashboard frontend
+const API = () => (window.CONFIG?.API_BASE_URL || '').replace(/\/$/, '');
 
-    init() {
-        this.setupEventListeners();
-        this.loadData();
-        this.startAutoRefresh();
-    }
+// Helpers
+const fmtPct = (v) => (v == null ? '--' : `${Math.round(v)}%`);
+const fmtFrac = (a,b) => (a==null||b==null ? '--/--' : `${a}/${b}`);
+const moneyBRL = (n) => {
+  if (n==null || isNaN(n)) return '--';
+  try { return n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+  catch { return `R$ ${Number(n).toFixed(2)}`; }
+};
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-    setupEventListeners() {
-        document.addEventListener('mousemove', (e) => {
-            if (this.tooltip.style.display === 'block') {
-                this.tooltip.style.left = (e.pageX + 10) + 'px';
-                this.tooltip.style.top = (e.pageY + 10) + 'px';
-            }
-        });
-    }
+// Build calendar days of current month
+function buildDays() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth(); // 0-based
+  const last = new Date(y, m+1, 0).getDate();
+  const start = new Date(y, m, 1);
+  const monthName = start.toLocaleDateString('pt-BR', { month: 'long', year:'numeric'});
+  $('#cal-title').textContent = `Calendário — ${monthName}`;
 
-    async loadData() {
-        try {
-            this.showLoading(true);
-            this.hideError();
-            
-            const [calendarData, repasseData] = await Promise.all([
-                this.fetchCalendarData(),
-                this.fetchRepasseData()
-            ]);
-
-            this.renderCards(calendarData, repasseData);
-            this.renderCalendar(calendarData);
-            this.updateLastUpdateTime();
-            
-        } catch (error) {
-            console.error('Error loading data:', error);
-            this.showError();
-        } finally {
-            this.showLoading(false);
-        }
-    }
-
-    async fetchCalendarData() {
-        const response = await fetch(`${this.config.API_BASE_URL}/calendario?mes=${this.currentMonth}`, {
-            headers: {
-                'Authorization': `Bearer ${this.config.API_TOKEN}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Calendar API error: ${response.status}`);
-        }
-        
-        return await response.json();
-    }
-
-    async fetchRepasseData() {
-        const response = await fetch(`${this.config.API_BASE_URL}/repasse?mes=${this.currentMonth}&incluir_limpeza=true`, {
-            headers: {
-                'Authorization': `Bearer ${this.config.API_TOKEN}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Repasse API error: ${response.status}`);
-        }
-        
-        return await response.json();
-    }
-
-    renderCards(calendarData, repasseData) {
-        const today = new Date();
-        const currentDay = today.getDate();
-        const totalDays = calendarData.dias.length;
-        
-        const metrics = this.calculateOccupancyMetrics(calendarData.dias, currentDay);
-        
-        document.getElementById('ateHojePerc').textContent = `${metrics.ateHoje.percentage}%`;
-        document.getElementById('ateHojeFrac').textContent = `${metrics.ateHoje.occupied}/${metrics.ateHoje.total}`;
-        
-        document.getElementById('futuroPerc').textContent = `${metrics.futuro.percentage}%`;
-        document.getElementById('futuroFrac').textContent = `${metrics.futuro.occupied}/${metrics.futuro.total}`;
-        
-        document.getElementById('fechamentoPerc').textContent = `${metrics.fechamento.percentage}%`;
-        document.getElementById('fechamentoFrac').textContent = `${metrics.fechamento.occupied}/${metrics.fechamento.total}`;
-        
-        document.getElementById('repasseValue').textContent = this.formatCurrency(repasseData.repasse_estimado);
-        document.getElementById('repasseStatus').textContent = repasseData.status;
-        document.getElementById('repasseMeta').textContent = `Meta: ${this.formatCurrency(repasseData.meta)}`;
-    }
-
-    calculateOccupancyMetrics(dias, currentDay) {
-        const ateHojeDays = dias.slice(0, currentDay);
-        const futuroDays = dias.slice(currentDay);
-        const allDays = dias;
-
-        const calculateOccupancy = (daysList) => {
-            const total = daysList.length;
-            const occupied = daysList.filter(day => day.reservas.length > 0).length;
-            const percentage = total > 0 ? Math.round((occupied / total) * 100) : 0;
-            return { total, occupied, percentage };
-        };
-
-        return {
-            ateHoje: calculateOccupancy(ateHojeDays),
-            futuro: calculateOccupancy(futuroDays),
-            fechamento: calculateOccupancy(allDays)
-        };
-    }
-
-    renderCalendar(calendarData) {
-        const calendarGrid = document.getElementById('calendarGrid');
-        const calendarTitle = document.getElementById('calendarTitle');
-        
-        const [year, month] = this.currentMonth.split('-');
-        const monthNames = [
-            'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-        ];
-        calendarTitle.textContent = `Calendário - ${monthNames[parseInt(month) - 1]} ${year}`;
-        
-        calendarGrid.innerHTML = '';
-        
-        const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-        weekdays.forEach(day => {
-            const header = document.createElement('div');
-            header.className = 'calendar-header-day';
-            header.textContent = day;
-            header.style.cssText = `
-                text-align: center;
-                font-weight: 600;
-                color: #94a3b8;
-                padding: 0.5rem;
-                font-size: 0.875rem;
-            `;
-            calendarGrid.appendChild(header);
-        });
-        
-        const firstDay = new Date(parseInt(year), parseInt(month) - 1, 1);
-        const firstDayOfWeek = firstDay.getDay();
-        
-        for (let i = 0; i < firstDayOfWeek; i++) {
-            const emptyDay = document.createElement('div');
-            emptyDay.className = 'calendar-day empty-slot';
-            emptyDay.style.opacity = '0.3';
-            calendarGrid.appendChild(emptyDay);
-        }
-        
-        const consecutiveEmptyDays = this.findConsecutiveEmptyDays(calendarData.dias);
-        
-        calendarData.dias.forEach((dayData, index) => {
-            const dayElement = this.createDayElement(dayData, consecutiveEmptyDays);
-            calendarGrid.appendChild(dayElement);
-        });
-    }
-
-    findConsecutiveEmptyDays(dias) {
-        const today = new Date().getDate();
-        const consecutiveSequences = [];
-        let currentSequence = [];
-        
-        for (let i = 0; i < Math.min(today, dias.length); i++) {
-            if (dias[i].reservas.length === 0) {
-                currentSequence.push(i + 1);
-            } else {
-                if (currentSequence.length >= 3) {
-                    consecutiveSequences.push([...currentSequence]);
-                }
-                currentSequence = [];
-            }
-        }
-        
-        if (currentSequence.length >= 3) {
-            consecutiveSequences.push([...currentSequence]);
-        }
-        
-        return consecutiveSequences.flat();
-    }
-
-    createDayElement(dayData, consecutiveEmptyDays) {
-        const dayElement = document.createElement('div');
-        const isOccupied = dayData.reservas.length > 0;
-        const isToday = dayData.dia === new Date().getDate();
-        const hasAlert = consecutiveEmptyDays.includes(dayData.dia);
-        
-        dayElement.className = `calendar-day ${isOccupied ? 'occupied' : 'empty'} ${isToday ? 'today' : ''}`;
-        
-        const dayNumber = document.createElement('div');
-        dayNumber.className = 'day-number';
-        dayNumber.textContent = dayData.dia;
-        dayElement.appendChild(dayNumber);
-        
-        if (isOccupied) {
-            const status = document.createElement('div');
-            status.className = 'day-status';
-            const reservation = dayData.reservas[0];
-            status.textContent = this.getStatusText(reservation.status);
-            dayElement.appendChild(status);
-        }
-        
-        if (hasAlert) {
-            const alertIcon = document.createElement('div');
-            alertIcon.className = 'alert-icon';
-            alertIcon.textContent = '🚨';
-            dayElement.appendChild(alertIcon);
-        }
-        
-        dayElement.addEventListener('mouseenter', (e) => {
-            this.showTooltip(e, dayData);
-        });
-        
-        dayElement.addEventListener('mouseleave', () => {
-            this.hideTooltip();
-        });
-        
-        return dayElement;
-    }
-
-    getStatusText(status) {
-        const statusMap = {
-            'checkin': 'Check-in',
-            'checkout': 'Check-out',
-            'ocupado': 'Ocupado'
-        };
-        return statusMap[status] || status;
-    }
-
-    showTooltip(event, dayData) {
-        const tooltipContent = document.getElementById('tooltipContent');
-        
-        if (dayData.reservas.length > 0) {
-            const reservation = dayData.reservas[0];
-            tooltipContent.innerHTML = `
-                <strong>Dia ${dayData.dia}</strong><br>
-                <strong>Hóspede:</strong> ${reservation.hospede}<br>
-                <strong>Status:</strong> ${this.getStatusText(reservation.status)}<br>
-                <strong>Valor:</strong> ${this.formatCurrency(reservation.total_bruto)}<br>
-                <strong>ID:</strong> ${reservation.id}
-            `;
-        } else {
-            tooltipContent.innerHTML = `
-                <strong>Dia ${dayData.dia}</strong><br>
-                <span style="color: #ef4444;">Sem reservas</span>
-            `;
-        }
-        
-        this.tooltip.style.display = 'block';
-        this.tooltip.style.left = (event.pageX + 10) + 'px';
-        this.tooltip.style.top = (event.pageY + 10) + 'px';
-    }
-
-    hideTooltip() {
-        this.tooltip.style.display = 'none';
-    }
-
-    formatCurrency(value) {
-        return new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
-        }).format(value);
-    }
-
-    updateLastUpdateTime() {
-        const now = new Date();
-        const timeString = now.toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
-        document.getElementById('lastUpdate').textContent = `Atualizado às ${timeString}`;
-        
-        const statusDot = document.querySelector('.status-dot');
-        statusDot.classList.remove('error');
-    }
-
-    showLoading(show) {
-        const container = document.querySelector('.container');
-        if (show) {
-            container.classList.add('loading');
-        } else {
-            container.classList.remove('loading');
-        }
-    }
-
-    showError() {
-        const errorMessage = document.getElementById('errorMessage');
-        const statusDot = document.querySelector('.status-dot');
-        
-        errorMessage.style.display = 'block';
-        statusDot.classList.add('error');
-        
-        document.getElementById('lastUpdate').textContent = 'Erro na atualização';
-    }
-
-    hideError() {
-        const errorMessage = document.getElementById('errorMessage');
-        errorMessage.style.display = 'none';
-    }
-
-    startAutoRefresh() {
-        if (this.refreshInterval) {
-            clearInterval(this.refreshInterval);
-        }
-        
-        this.refreshInterval = setInterval(() => {
-            console.log('Auto-refreshing dashboard data...');
-            this.loadData();
-        }, this.config.REFRESH_INTERVAL);
-        
-        console.log(`Auto-refresh started: every ${this.config.REFRESH_INTERVAL / 1000} seconds`);
-    }
-
-    stopAutoRefresh() {
-        if (this.refreshInterval) {
-            clearInterval(this.refreshInterval);
-            this.refreshInterval = null;
-        }
-    }
+  const strip = $('#cal-strip');
+  strip.innerHTML = '';
+  for (let d=1; d<=last; d++) {
+    const dt = new Date(y, m, d);
+    const dow = dt.toLocaleDateString('pt-BR',{ weekday:'short'}).toUpperCase().replace('.', '');
+    const div = document.createElement('div');
+    div.className = 'pill';
+    div.dataset.date = dt.toISOString().slice(0,10);
+    div.innerHTML = `<div class="num">${String(d).padStart(2,'0')}</div><div class="dow">${dow}</div>`;
+    strip.appendChild(div);
+  }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    window.dashboard = new StaysDashboard();
-});
+// Map API calendar payload to a simple structure
+function normalizeCalendar(data) {
+  // Try several formats. We aim at { days: [{date:'YYYY-MM-DD', reserved:bool, tooltip?:string}], stats:{...} }
+  const out = { days: [], stats: {} };
 
-document.addEventListener('visibilitychange', () => {
-    if (window.dashboard) {
-        if (document.hidden) {
-            console.log('Page hidden, stopping auto-refresh');
-            window.dashboard.stopAutoRefresh();
-        } else {
-            console.log('Page visible, resuming auto-refresh');
-            window.dashboard.startAutoRefresh();
-            window.dashboard.loadData();
-        }
+  if (!data) return out;
+
+  if (Array.isArray(data.days)) {
+    out.days = data.days.map(d => ({
+      date: d.date || d.data || d.dia || d.dt,
+      reserved: ('reserved' in d) ? d.reserved : (!!d.ocupado || d.status==='booked' || d.color==='green'),
+      tooltip: d.tooltip || d.info || d.label || ''
+    }));
+  } else if (Array.isArray(data)) {
+    out.days = data.map(d => ({
+      date: d.date || d.data || d.dia || d.dt,
+      reserved: ('reserved' in d) ? d.reserved : (!!d.ocupado || d.status==='booked' || d.color==='green'),
+      tooltip: d.tooltip || d.info || d.label || ''
+    }));
+  } else if (data.calendar && Array.isArray(data.calendar)) {
+    out.days = data.calendar.map(d => ({
+      date: d.date,
+      reserved: !!d.reserved,
+      tooltip: d.tooltip || ''
+    }));
+  }
+
+  // Stats
+  const s = data.stats || data.metricas || data.resumo || {};
+  const parseFrac = (x) => {
+    if (!x) return {a:null,b:null};
+    if (typeof x === 'string' && x.includes('/')) {
+      const [a,b] = x.split('/').map(Number);
+      return {a,b};
     }
+    if (typeof x === 'object' && ('a' in x || 'b' in x)) return x;
+    return {a:null,b:null};
+  };
+
+  const ateHojeF = parseFrac(s.ateHojeFrac || s.ate_hoje_fracao || s.ateHoje || s.hoje);
+  const futuroF = parseFrac(s.futuroFrac || s.futuro_fracao || s.futuro);
+  const fechF = parseFrac(s.fechamentoFrac || s.fechamento_fracao || s.fechamento);
+
+  out.stats = {
+    ateHojePct: s.ateHojePct ?? s.ate_hoje_pct ?? s.hojePct ?? s.hoje ?? null,
+    ateHojeA: ateHojeF.a, ateHojeB: ateHojeF.b,
+    futuroPct: s.futuroPct ?? s.futuro_pct ?? null,
+    futuroA: futuroF.a, futuroB: futuroF.b,
+    fechamentoPct: s.fechamentoPct ?? s.fechamento_pct ?? null,
+    fechamentoA: fechF.a, fechamentoB: fechF.b,
+  };
+
+  return out;
+}
+
+function applyCalendar(cal) {
+  // Color pills
+  const map = new Map(cal.days.map(d => [d.date, d]));
+  $$('#cal-strip .pill').forEach(pill => {
+    const dt = pill.dataset.date;
+    const it = map.get(dt);
+    pill.classList.remove('reserved','empty');
+    if (it) {
+      pill.classList.add(it.reserved ? 'reserved' : 'empty');
+      if (it.tooltip) pill.title = it.tooltip;
+    }
+  });
+
+  // Compute 🚨 for 3+ empty in a row from day 1 until today
+  const todayISO = new Date().toISOString().slice(0,10);
+  let streak = 0;
+  $$('#cal-strip .pill').forEach(pill => {
+    const date = pill.dataset.date;
+    // remove old siren
+    pill.querySelector('.siren')?.remove();
+
+    if (date <= todayISO) {
+      const empty = pill.classList.contains('empty');
+      streak = empty ? (streak+1) : 0;
+      if (streak >= 3) {
+        const s = document.createElement('div');
+        s.className = 'siren';
+        s.textContent = '🚨';
+        pill.appendChild(s);
+      }
+    }
+  });
+}
+
+function applyStats(stats) {
+  $('#ate-hoje-pct').textContent = fmtPct(stats.ateHojePct);
+  $('#ate-hoje-frac').textContent = fmtFrac(stats.ateHojeA, stats.ateHojeB);
+  $('#futuro-pct').textContent = fmtPct(stats.futuroPct);
+  $('#futuro-frac').textContent = fmtFrac(stats.futuroA, stats.futuroB);
+  $('#fechamento-pct').textContent = fmtPct(stats.fechamentoPct);
+  $('#fechamento-frac').textContent = fmtFrac(stats.fechamentoA, stats.fechamentoB);
+}
+
+async function fetchCalendar() {
+  const url = API() + '/calendario';
+  const res = await fetch(url, {cache:'no-store'});
+  if (!res.ok) throw new Error('Erro ao buscar calendário');
+  const data = await res.json();
+  const normalized = normalizeCalendar(data);
+  applyStats(normalized.stats);
+  applyCalendar(normalized);
+}
+
+async function fetchRepasse() {
+  const url = API() + '/repasse';
+  const res = await fetch(url, {cache:'no-store'});
+  if (!res.ok) throw new Error('Erro ao buscar repasse');
+  const data = await res.json();
+  // Allow flexible shapes
+  const total = data.total ?? data.valor ?? data.repasse ?? data.mes ?? null;
+  const obs = data.obs ?? data.observacao ?? data.nota ?? '';
+  $('#repasse-total').textContent = moneyBRL(Number(total));
+  $('#repasse-obs').textContent = obs || 'em progresso';
+}
+
+async function refreshAll(showErr=true) {
+  try {
+    $('#error').classList.add('hidden');
+    await Promise.all([fetchCalendar(), fetchRepasse()]);
+    $('#last-updated').textContent = new Date().toLocaleTimeString('pt-BR');
+  } catch (err) {
+    console.error(err);
+    if (showErr) {
+      $('#error').textContent = 'Falha ao atualizar: ' + err.message;
+      $('#error').classList.remove('hidden');
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  buildDays();
+  $('#btn-refresh').addEventListener('click', () => refreshAll(true));
+  await refreshAll(true);
+  setInterval(refreshAll, 60_000);
 });
