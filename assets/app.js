@@ -134,8 +134,13 @@ function applyStats(stats) {
 }
 
 async function fetchCalendar() {
-  const url = API() + '/calendario';
-  const res = await fetch(url, {cache:'no-store'});
+  const url = API() + '/calendario?mes=2025-08';
+  const res = await fetch(url, {
+    cache:'no-store',
+    headers: {
+      'Authorization': `Bearer ${window.CONFIG?.API_TOKEN || 'default-token'}`
+    }
+  });
   if (!res.ok) throw new Error('Erro ao buscar calendário');
   const data = await res.json();
   const normalized = normalizeCalendar(data);
@@ -144,13 +149,18 @@ async function fetchCalendar() {
 }
 
 async function fetchRepasse() {
-  const url = API() + '/repasse';
-  const res = await fetch(url, {cache:'no-store'});
+  const url = API() + '/repasse?mes=2025-08&incluir_limpeza=true';
+  const res = await fetch(url, {
+    cache:'no-store',
+    headers: {
+      'Authorization': `Bearer ${window.CONFIG?.API_TOKEN || 'default-token'}`
+    }
+  });
   if (!res.ok) throw new Error('Erro ao buscar repasse');
   const data = await res.json();
   // Allow flexible shapes
-  const total = data.total ?? data.valor ?? data.repasse ?? data.mes ?? null;
-  const obs = data.obs ?? data.observacao ?? data.nota ?? '';
+  const total = data.total ?? data.valor ?? data.repasse ?? data.repasse_estimado ?? null;
+  const obs = data.obs ?? data.observacao ?? data.nota ?? data.status ?? '';
   $('#repasse-total').textContent = moneyBRL(Number(total));
   $('#repasse-obs').textContent = obs || 'em progresso';
 }
