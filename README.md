@@ -46,3 +46,32 @@ Deixe a API aceitar o domínio do seu site na configuração CORS do backend.
 - `GET /repasse` retorna um objeto com `total` (número) e `obs` (string). O parser é tolerante a variações (`valor`, `repasse`, etc).
 
 Se o shape for diferente, ajuste a função `normalizeCalendar` em `assets/app.js`.
+
+## 🔗 Webhook da Stays
+
+Para configurar webhooks na plataforma Stays e manter o dashboard atualizado em tempo real:
+
+### URL do Webhook
+```
+https://stays-dashboard-api.onrender.com/webhooks/stays
+```
+
+### Configuração
+1. **Método**: POST
+2. **Content-Type**: application/json
+3. **Autenticação**: Bearer token (mesmo token da API)
+4. **Eventos**: Reservas criadas, modificadas, canceladas
+
+### Exemplo de configuração na Stays
+```bash
+# Teste do webhook
+curl -X POST https://stays-dashboard-api.onrender.com/webhooks/stays \
+  -H "Authorization: Bearer test-token-12345" \
+  -H "Content-Type: application/json" \
+  -d '{"event": "reservation.created", "data": {...}}'
+```
+
+### Comportamento
+- O webhook limpa o cache da API automaticamente
+- O dashboard detecta mudanças na próxima atualização (máximo 60s)
+- Para atualizações instantâneas, implemente Server-Sent Events (SSE) no futuro
