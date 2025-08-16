@@ -42,7 +42,19 @@ function normalizeCalendar(data) {
 
   if (!data) return out;
 
-  if (Array.isArray(data.days)) {
+  if (data.dias && Array.isArray(data.dias)) {
+    out.days = data.dias.map(d => {
+      const hasReservations = d.reservas && d.reservas.length > 0;
+      const tooltip = hasReservations ? 
+        d.reservas.map(r => `${r.hospede} (${r.status}) - ${moneyBRL(r.total_bruto)}`).join(', ') : 
+        '';
+      return {
+        date: d.data,
+        reserved: hasReservations,
+        tooltip: tooltip
+      };
+    });
+  } else if (Array.isArray(data.days)) {
     out.days = data.days.map(d => ({
       date: d.date || d.data || d.dia || d.dt,
       reserved: ('reserved' in d) ? d.reserved : (!!d.ocupado || d.status==='booked' || d.color==='green'),
@@ -62,30 +74,55 @@ function normalizeCalendar(data) {
     }));
   }
 
-  // Stats
-  const s = data.stats || data.metricas || data.resumo || {};
-  const parseFrac = (x) => {
-    if (!x) return {a:null,b:null};
-    if (typeof x === 'string' && x.includes('/')) {
-      const [a,b] = x.split('/').map(Number);
-      return {a,b};
-    }
-    if (typeof x === 'object' && ('a' in x || 'b' in x)) return x;
-    return {a:null,b:null};
-  };
+  if (out.days.length > 0) {
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+    
+    const daysUntilToday = out.days.filter(d => d.date <= todayStr);
+    const occupiedUntilToday = daysUntilToday.filter(d => d.reserved).length;
+    
+    const futureDays = out.days.filter(d => d.date > todayStr);
+    const occupiedFuture = futureDays.filter(d => d.reserved).length;
+    
+    const totalDays = out.days.length;
+    const totalOccupied = out.days.filter(d => d.reserved).length;
+    
+    out.stats = {
+      ateHojePct: daysUntilToday.length > 0 ? Math.round((occupiedUntilToday / daysUntilToday.length) * 100) : null,
+      ateHojeA: occupiedUntilToday,
+      ateHojeB: daysUntilToday.length,
+      futuroPct: futureDays.length > 0 ? Math.round((occupiedFuture / futureDays.length) * 100) : null,
+      futuroA: occupiedFuture,
+      futuroB: futureDays.length,
+      fechamentoPct: totalDays > 0 ? Math.round((totalOccupied / totalDays) * 100) : null,
+      fechamentoA: totalOccupied,
+      fechamentoB: totalDays,
+    };
+  } else {
+    const s = data.stats || data.metricas || data.resumo || {};
+    const parseFrac = (x) => {
+      if (!x) return {a:null,b:null};
+      if (typeof x === 'string' && x.includes('/')) {
+        const [a,b] = x.split('/').map(Number);
+        return {a,b};
+      }
+      if (typeof x === 'object' && ('a' in x || 'b' in x)) return x;
+      return {a:null,b:null};
+    };
 
-  const ateHojeF = parseFrac(s.ateHojeFrac || s.ate_hoje_fracao || s.ateHoje || s.hoje);
-  const futuroF = parseFrac(s.futuroFrac || s.futuro_fracao || s.futuro);
-  const fechF = parseFrac(s.fechamentoFrac || s.fechamento_fracao || s.fechamento);
+    const ateHojeF = parseFrac(s.ateHojeFrac || s.ate_hoje_fracao || s.ateHoje || s.hoje);
+    const futuroF = parseFrac(s.futuroFrac || s.futuro_fracao || s.futuro);
+    const fechF = parseFrac(s.fechamentoFrac || s.fechamento_fracao || s.fechamento);
 
-  out.stats = {
-    ateHojePct: s.ateHojePct ?? s.ate_hoje_pct ?? s.hojePct ?? s.hoje ?? null,
-    ateHojeA: ateHojeF.a, ateHojeB: ateHojeF.b,
-    futuroPct: s.futuroPct ?? s.futuro_pct ?? null,
-    futuroA: futuroF.a, futuroB: futuroF.b,
-    fechamentoPct: s.fechamentoPct ?? s.fechamento_pct ?? null,
-    fechamentoA: fechF.a, fechamentoB: fechF.b,
-  };
+    out.stats = {
+      ateHojePct: s.ateHojePct ?? s.ate_hoje_pct ?? s.hojePct ?? s.hoje ?? null,
+      ateHojeA: ateHojeF.a, ateHojeB: ateHojeF.b,
+      futuroPct: s.futuroPct ?? s.futuro_pct ?? null,
+      futuroA: futuroF.a, futuroB: futuroF.b,
+      fechamentoPct: s.fechamentoPct ?? s.fechamento_pct ?? null,
+      fechamentoA: fechF.a, fechamentoB: fechF.b,
+    };
+  }
 
   return out;
 }
