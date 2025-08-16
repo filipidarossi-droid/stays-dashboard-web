@@ -8,11 +8,13 @@ Dashboard web para visualização de ocupação, calendário e métricas de repa
 
 ## 🚀 Funcionalidades
 
+- **Seletor de Unidades**: Filtro por unidade específica ou "Todas as unidades"
 - **Cards de Ocupação**: Métricas "Até hoje", "Futuro", "Fechamento" e "Repasse"
 - **Calendário Interativo**: Visualização mensal com status de reservas
 - **Tooltips**: Informações detalhadas ao passar o mouse sobre as datas
-- **Auto-refresh**: Atualização automática a cada 60 segundos
+- **Auto-refresh**: Atualização automática a cada 60 segundos respeitando filtro
 - **Alertas**: Indicador 🚨 para 3+ dias vazios até hoje
+- **Persistência**: Seleção de unidade salva no localStorage
 - **Responsivo**: Interface adaptável para desktop e mobile
 
 ## ⚙️ Configuração
@@ -59,20 +61,27 @@ stays-dashboard-web/
 
 ### Checklist de Funcionamento
 - [ ] **Carregamento**: Página abre sem erros
+- [ ] **Seletor de Unidades**: Carrega lista de unidades da API
+- [ ] **Persistência**: Seleção de unidade mantida após refresh
+- [ ] **Filtro**: Trocar unidade atualiza cards e calendário
 - [ ] **Cards**: Exibem métricas corretas (ocupação, repasse)
 - [ ] **Calendário**: Mostra reservas com cores adequadas
 - [ ] **Tooltips**: Informações aparecem ao passar o mouse
-- [ ] **Auto-refresh**: Atualiza a cada 60 segundos
+- [ ] **Auto-refresh**: Atualiza a cada 60 segundos respeitando filtro
 - [ ] **Alerta 🚨**: Aparece quando há 3+ dias vazios
 - [ ] **Console**: Sem erros de CORS ou JavaScript
 
 ### Teste Manual
 1. Abra: https://stays-dashboard-web.onrender.com
-2. Verifique se os cards carregam com dados
-3. Navegue pelo calendário (setas < >)
-4. Passe o mouse sobre datas com reservas
-5. Aguarde 60 segundos para ver auto-refresh
-6. Abra DevTools → Console (F12) para verificar erros
+2. Verifique se o seletor de unidades carrega as opções
+3. Teste "Todas as unidades" (dados agregados)
+4. Selecione uma unidade específica (dados filtrados)
+5. Recarregue a página (seleção deve persistir)
+6. Verifique se os cards carregam com dados corretos
+7. Navegue pelo calendário (setas < >)
+8. Passe o mouse sobre datas com reservas
+9. Aguarde 60 segundos para ver auto-refresh
+10. Abra DevTools → Console (F12) para verificar erros
 
 ### Teste de CORS
 No console do navegador (F12):

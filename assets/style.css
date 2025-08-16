@@ -15,6 +15,16 @@ body{
   padding:16px 22px; border-bottom:1px solid var(--border); background:rgba(8,13,22,.7); backdrop-filter: blur(8px);
   position:sticky; top:0; z-index:5;
 }
+.left-section{display:flex; align-items:center; gap:16px}
+.unit-selector{position:relative}
+.unit-dropdown{
+  background:var(--panel); border:1px solid var(--border); border-radius:8px;
+  color:var(--text); padding:6px 12px; font-size:13px; min-width:160px;
+  cursor:pointer; outline:none;
+}
+.unit-dropdown:hover{border-color:#24406a}
+.unit-dropdown:focus{border-color:var(--accent); box-shadow:0 0 0 2px rgba(255,209,102,.2)}
+.unit-dropdown option{background:var(--panel); color:var(--text)}
 .brand{font-weight:700; letter-spacing:.2px}
 .live{display:flex; gap:8px; align-items:center; color:var(--muted)}
 .dot{width:8px;height:8px;border-radius:50%;background:#5cff9b;box-shadow:0 0 10px #22ff88}

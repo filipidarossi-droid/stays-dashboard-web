@@ -12,6 +12,53 @@ const moneyBRL = (n) => {
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
+let selectedUnitId = localStorage.getItem('selectedUnitId') || 'ALL';
+let availableUnits = [];
+
+async function fetchUnits() {
+  try {
+    const url = API() + '/unidades';
+    const res = await fetch(url, {
+      cache: 'no-store',
+      headers: {
+        'Authorization': `Bearer ${window.CONFIG?.API_TOKEN || 'default-token'}`
+      }
+    });
+    if (!res.ok) throw new Error('Erro ao buscar unidades');
+    const units = await res.json();
+    availableUnits = units;
+    populateUnitSelector();
+  } catch (err) {
+    console.error('Failed to fetch units:', err);
+  }
+}
+
+function populateUnitSelector() {
+  const select = $('#unit-select');
+  select.innerHTML = '<option value="ALL">Todas as unidades</option>';
+  
+  availableUnits.forEach(unit => {
+    const option = document.createElement('option');
+    option.value = unit.id;
+    option.textContent = unit.nome;
+    select.appendChild(option);
+  });
+  
+  select.value = selectedUnitId;
+}
+
+function onUnitChange() {
+  const select = $('#unit-select');
+  selectedUnitId = select.value;
+  localStorage.setItem('selectedUnitId', selectedUnitId);
+  
+  refreshAll(true);
+}
+
+function getUnitQueryParam() {
+  return selectedUnitId === 'ALL' ? '' : `&unidade_id=${encodeURIComponent(selectedUnitId)}`;
+}
+
 // Build calendar days of current month
 function buildDays() {
   const now = new Date();
@@ -171,7 +218,8 @@ function applyStats(stats) {
 }
 
 async function fetchCalendar() {
-  const url = API() + '/calendario?mes=2025-08';
+  const unitParam = getUnitQueryParam();
+  const url = API() + `/calendario?mes=2025-08${unitParam}`;
   const res = await fetch(url, {
     cache:'no-store',
     headers: {
@@ -186,7 +234,8 @@ async function fetchCalendar() {
 }
 
 async function fetchRepasse() {
-  const url = API() + '/repasse?mes=2025-08&incluir_limpeza=true';
+  const unitParam = getUnitQueryParam();
+  const url = API() + `/repasse?mes=2025-08&incluir_limpeza=true${unitParam}`;
   const res = await fetch(url, {
     cache:'no-store',
     headers: {
@@ -195,7 +244,6 @@ async function fetchRepasse() {
   });
   if (!res.ok) throw new Error('Erro ao buscar repasse');
   const data = await res.json();
-  // Allow flexible shapes
   const total = data.total ?? data.valor ?? data.repasse ?? data.repasse_estimado ?? null;
   const obs = data.obs ?? data.observacao ?? data.nota ?? data.status ?? '';
   $('#repasse-total').textContent = moneyBRL(Number(total));
@@ -219,6 +267,9 @@ async function refreshAll(showErr=true) {
 document.addEventListener('DOMContentLoaded', async () => {
   buildDays();
   $('#btn-refresh').addEventListener('click', () => refreshAll(true));
+  $('#unit-select').addEventListener('change', onUnitChange);
+  
+  await fetchUnits();
   await refreshAll(true);
   setInterval(refreshAll, 60_000);
 });
