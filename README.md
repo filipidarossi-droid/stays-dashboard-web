@@ -1,263 +1,198 @@
-# Stays Dashboard Web
+# Stays Dashboard - Frontend
 
-Frontend dashboard para visualização de dados da plataforma Stays, consumindo a API deployada no Render.
+Dashboard web para visualização de ocupação, calendário e métricas de repasse da plataforma Stays.
+
+## 🌐 URL de Produção
+
+**Frontend**: https://stays-dashboard-web.onrender.com
 
 ## 🚀 Funcionalidades
 
-- **Dashboard em tempo real** com atualização automática a cada 60 segundos
-- **Cards de métricas**: Ocupação "Até hoje", "Futuro", "Fechamento" e "Repasse do mês"
-- **Calendário visual** com indicadores de ocupação e status das reservas
-- **Sistema de alertas** (🚨) para 3+ dias consecutivos sem reservas
-- **Tooltips informativos** com detalhes das reservas ao passar o mouse
-- **Design responsivo** e tema dark moderno
-- **Tratamento de erros** com fallbacks visuais
+- **Seletor de Unidades**: Filtro por unidade específica ou "Todas as unidades"
+- **Cards de Ocupação**: Métricas "Até hoje", "Futuro", "Fechamento" e "Repasse"
+- **Calendário Interativo**: Visualização mensal com status de reservas
+- **Tooltips**: Informações detalhadas ao passar o mouse sobre as datas
+- **Auto-refresh**: Atualização automática a cada 60 segundos respeitando filtro
+- **Alertas**: Indicador 🚨 para 3+ dias vazios até hoje
+- **Persistência**: Seleção de unidade salva no localStorage
+- **Responsivo**: Interface adaptável para desktop e mobile
 
-## 📋 Pré-requisitos
+## ⚙️ Configuração
 
-- Navegador web moderno
-- Acesso à internet para consumir a API
-- API Stays Dashboard rodando em: https://stays-dashboard-api.onrender.com
+### API Base URL
+O frontend está configurado para consumir a API de produção:
 
-## 🛠️ Instalação e Execução Local
-
-### 1. Clone o repositório
-```bash
-git clone https://github.com/filipidarossi-droid/stays-dashboard-web.git
-cd stays-dashboard-web
-```
-
-### 2. Configurar API (se necessário)
-Edite o arquivo `config.js` para ajustar a URL da API:
 ```javascript
+// config.js
 window.CONFIG = {
   API_BASE_URL: 'https://stays-dashboard-api.onrender.com',
-  API_TOKEN: 'seu-token-aqui',
-  REFRESH_INTERVAL: 60000, // 60 segundos
-  CURRENT_MONTH: '2025-08'
+  API_TOKEN: 'YOUR_SECURE_43_CHAR_TOKEN_HERE'
 };
 ```
 
-### 3. Executar localmente
-
-**Opção A - Python (recomendado):**
-```bash
-python -m http.server 8080
+### CORS
+A API está configurada para aceitar requisições apenas do frontend de produção:
 ```
-
-**Opção B - Node.js:**
-```bash
-npx serve . -p 8080
+CORS_ORIGINS=https://stays-dashboard-web.onrender.com
 ```
-
-**Opção C - PHP:**
-```bash
-php -S localhost:8080
-```
-
-### 4. Acessar o dashboard
-Abra o navegador em: http://localhost:8080
 
 ## 🚀 Deploy no Render
 
-### 1. Conectar repositório
-- Acesse [Render](https://render.com)
-- Clique em "New" → "Static Site"
-- Conecte sua conta GitHub
-- Selecione o repositório `stays-dashboard-web`
+### Configuração do Static Site
+1. **Render Dashboard** → **New** → **Static Site**
+2. **Conectar repositório**: `filipidarossi-droid/stays-dashboard-api`
+3. **Configurações**:
+   - **Build Command**: *(vazio)*
+   - **Publish Directory**: `stays-dashboard-web`
+   - **Auto-Deploy**: Habilitado
 
-### 2. Configurar o Static Site
-- **Name**: `stays-dashboard-web`
-- **Branch**: `main`
-- **Root Directory**: `.` (raiz)
-- **Build Command**: (deixe vazio)
-- **Publish Directory**: `.` (raiz)
-
-### 3. Deploy automático
-- Habilite "Auto-Deploy" para deploy automático a cada push
-- O site ficará disponível em: `https://stays-dashboard-web.onrender.com`
-
-### 4. Configurar CORS na API
-Após o deploy, atualize as configurações de CORS na API para incluir o domínio do frontend:
-
-```python
-# No arquivo main.py da API
-CORS_ORIGINS = [
-    "https://stays-dashboard-web.onrender.com",
-    "http://localhost:8080",
-    "http://localhost:3000"
-]
-```
-
-## 📊 Estrutura do Projeto
-
+### Estrutura de Arquivos
 ```
 stays-dashboard-web/
-├── index.html          # Página principal do dashboard
-├── config.js           # Configurações da API e parâmetros
+├── index.html          # Página principal
+├── config.js           # Configuração da API
 ├── assets/
-│   ├── style.css       # Estilos CSS (tema dark)
-│   └── app.js          # Lógica JavaScript principal
-└── README.md           # Este arquivo
+│   ├── app.js          # Lógica do dashboard
+│   └── style.css       # Estilos CSS
+└── README.md           # Esta documentação
 ```
 
-## 🔧 Configuração da API
+## 🧪 Validação
 
-### Endpoints Consumidos
-- `GET /calendario?mes=YYYY-MM` - Dados do calendário mensal
-- `GET /repasse?mes=YYYY-MM&incluir_limpeza=true` - Cálculos de repasse
+### Checklist de Funcionamento
+- [ ] **Carregamento**: Página abre sem erros
+- [ ] **Seletor de Unidades**: Carrega lista de unidades da API
+- [ ] **Persistência**: Seleção de unidade mantida após refresh
+- [ ] **Filtro**: Trocar unidade atualiza cards e calendário
+- [ ] **Cards**: Exibem métricas corretas (ocupação, repasse)
+- [ ] **Calendário**: Mostra reservas com cores adequadas
+- [ ] **Tooltips**: Informações aparecem ao passar o mouse
+- [ ] **Auto-refresh**: Atualiza a cada 60 segundos respeitando filtro
+- [ ] **Alerta 🚨**: Aparece quando há 3+ dias vazios
+- [ ] **Console**: Sem erros de CORS ou JavaScript
 
-### Autenticação
-Todos os endpoints requerem Bearer Token:
+### Teste Manual
+1. Abra: https://stays-dashboard-web.onrender.com
+2. Verifique se o seletor de unidades carrega as opções
+3. Teste "Todas as unidades" (dados agregados)
+4. Selecione uma unidade específica (dados filtrados)
+5. Recarregue a página (seleção deve persistir)
+6. Verifique se os cards carregam com dados corretos
+7. Navegue pelo calendário (setas < >)
+8. Passe o mouse sobre datas com reservas
+9. Aguarde 60 segundos para ver auto-refresh
+10. Abra DevTools → Console (F12) para verificar erros
+
+### Teste de CORS
+No console do navegador (F12):
 ```javascript
-headers: {
-    'Authorization': 'Bearer SEU_TOKEN',
-    'Content-Type': 'application/json'
-}
+fetch('https://stays-dashboard-api.onrender.com/calendario?mes=2025-08', {
+  cache: 'no-store'
+})
+.then(r => {
+  console.log('CORS Origin:', r.headers.get('access-control-allow-origin'));
+  return r.json();
+})
+.then(data => console.log('Data:', data))
+.catch(err => console.error('Error:', err));
 ```
 
-## 🔔 Configuração do Webhook Stays
+**Resultado esperado:**
+- `CORS Origin: https://stays-dashboard-web.onrender.com`
+- `Data: {mes: "2025-08", dias: [...]}`
 
-Para receber atualizações em tempo real da plataforma Stays:
+## 🏃‍♂️ Execução Local (Desenvolvimento)
 
-### 1. Endpoint do Webhook
-```
-URL: https://stays-dashboard-api.onrender.com/webhooks/stays
-Método: POST
-Content-Type: application/json
-```
-
-### 2. Configuração na Stays
-1. Acesse o painel administrativo da Stays
-2. Vá em "Configurações" → "Webhooks" → "Adicionar Webhook"
-3. Configure:
-   - **URL**: `https://stays-dashboard-api.onrender.com/webhooks/stays`
-   - **Método**: `POST`
-   - **Eventos**: `reservation_created`, `reservation_updated`, `reservation_cancelled`
-   - **Token de Autenticação**: `Bearer SEU_API_TOKEN`
-
-### 3. Payload de Exemplo
-```json
-{
-  "event": "reservation_updated",
-  "reservation_id": "RES123",
-  "listing_id": "1",
-  "timestamp": "2025-08-16T13:00:00Z",
-  "data": {
-    "checkin": "2025-08-20",
-    "checkout": "2025-08-25",
-    "guest_name": "João Silva",
-    "total_amount": 1250.00
-  }
-}
-```
-
-### 4. Teste do Webhook
 ```bash
-curl -X POST https://stays-dashboard-api.onrender.com/webhooks/stays \
-  -H "Authorization: Bearer SEU_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"event": "test", "timestamp": "2025-08-16T13:00:00Z"}'
+# Opção 1 - Python
+python -m http.server 4173
+
+# Opção 2 - Node.js (recomendado)
+npx serve -l 4173
+
+# Opção 3 - Live Server (VS Code)
+# Instale extensão Live Server e clique "Go Live"
 ```
 
-## 📱 Funcionalidades do Dashboard
+Acesse: http://localhost:4173
 
-### Cards de Métricas
-- **Até Hoje**: Percentual e fração de ocupação desde o dia 1 até hoje
-- **Futuro**: Percentual e fração de ocupação dos dias restantes do mês
-- **Fechamento**: Percentual e fração de ocupação total do mês
-- **Repasse**: Valor estimado, status e meta mensal
+## 🔧 Como Migrar para Domínio Próprio (Futuro)
 
-### Calendário Interativo
-- **Dias ocupados**: Fundo verde com status da reserva
-- **Dias vazios**: Fundo vermelho
-- **Dia atual**: Borda dourada destacada
-- **Alertas**: 🚨 para 3+ dias consecutivos vazios (do dia 1 até hoje)
-- **Tooltips**: Informações detalhadas ao passar o mouse
+### 1. Configurar Domínio Customizado
+**Render** → **Static Site** → **Settings** → **Custom Domains**
+- Adicionar: `dash.seudominio.com`
 
-### Sistema de Alertas
-O sistema detecta automaticamente sequências de 3 ou mais dias consecutivos sem reservas, contando do dia 1 até o dia atual, e exibe o ícone 🚨 nesses dias.
-
-### Auto-refresh
-- Atualização automática a cada 60 segundos
-- Pausa quando a aba não está visível (economia de recursos)
-- Retoma automaticamente quando a aba volta a ficar ativa
-- Indicador visual de status da conexão
-
-## 🎨 Personalização
-
-### Alterar Tema
-Edite `assets/style.css` para personalizar cores:
-```css
-:root {
-  --primary-color: #60a5fa;
-  --success-color: #10b981;
-  --error-color: #ef4444;
-  --background: #0f0f23;
-}
+### 2. Configurar DNS
+```
+Host: dash
+Tipo: CNAME
+Aponta para: stays-dashboard-web.onrender.com
+TTL: Automático
 ```
 
-### Alterar Intervalo de Atualização
-Edite `config.js`:
+### 3. Atualizar CORS na API
+```bash
+# No serviço da API, atualizar variável:
+CORS_ORIGINS=https://dash.seudominio.com,https://stays-dashboard-web.onrender.com
+```
+
+### 4. Atualizar config.js (se necessário)
 ```javascript
-REFRESH_INTERVAL: 30000, // 30 segundos
+window.CONFIG = {
+  API_BASE_URL: 'https://api.seudominio.com'  // Se API também tiver domínio próprio
+};
 ```
 
-### Alterar Mês Exibido
-Edite `config.js`:
-```javascript
-CURRENT_MONTH: '2025-09' // Setembro 2025
+### 5. Validar
+```bash
+curl -I https://dash.seudominio.com/
+# Deve retornar 200 OK com TLS ativo
 ```
 
-## 🐛 Troubleshooting
+## 🛠️ Troubleshooting
 
-### Dashboard não carrega dados
-1. Verifique se a API está online: https://stays-dashboard-api.onrender.com/health
-2. Confirme o token de autenticação em `config.js`
-3. Verifique o console do navegador para erros de CORS
+### Dashboard não carrega
+- Verifique se a API está online: https://stays-dashboard-api.onrender.com/health
+- Confirme CORS no console do navegador (F12)
+- Verifique se `config.js` aponta para URL correta da API
 
 ### Erro de CORS
-1. Confirme que o domínio do frontend está configurado na API
-2. Verifique se o protocolo (http/https) está correto
-3. Teste localmente primeiro
+```
+Access to fetch at 'https://stays-dashboard-api.onrender.com/...' from origin 'https://...' has been blocked by CORS policy
+```
+**Solução**: Confirme que o domínio está em `CORS_ORIGINS` na API
+
+### Cards vazios ou com erro
+- API pode estar com problemas de autenticação
+- Verifique se `API_TOKEN` no `config.js` está correto
+- Confirme se endpoints da API respondem corretamente
 
 ### Auto-refresh não funciona
-1. Verifique se há erros no console
-2. Confirme que a aba está ativa
-3. Teste manualmente recarregando a página
+- Verifique console do navegador para erros JavaScript
+- Confirme se não há bloqueio de rede/firewall
+- Timer está configurado para 60 segundos em `app.js`
 
-### Alertas não aparecem
-1. Verifique se há pelo menos 3 dias consecutivos vazios
-2. Confirme que a contagem é do dia 1 até hoje
-3. Verifique os dados retornados pela API
+### Performance lenta
+- API tem cache de 15 minutos (TTL)
+- Primeira carga pode ser mais lenta (cold start do Render)
+- Verifique se não há muitas requisições simultâneas
 
-## 📞 Suporte
+## 📱 Compatibilidade
 
-Para problemas técnicos:
-1. Verifique os logs do navegador (F12 → Console)
-2. Teste a API diretamente: `curl https://stays-dashboard-api.onrender.com/health`
-3. Confirme as configurações de CORS na API
-4. Verifique se o webhook está configurado corretamente na Stays
+- **Navegadores**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
+- **Dispositivos**: Desktop, tablet, mobile (responsivo)
+- **Resolução**: Mínima 320px de largura
 
-## 🔄 Atualizações
+## 🔒 Segurança
 
-Para atualizar o dashboard:
-1. Faça as alterações no código
-2. Commit e push para o repositório
-3. O Render fará deploy automático
-4. Verifique se não há erros de build nos logs do Render
+- **HTTPS**: Forçado pelo Render (TLS automático)
+- **CORS**: Restrito apenas à API de produção
+- **Tokens**: Não expostos em logs do navegador
+- **CSP**: Headers de segurança configurados pelo Render
 
-## 📈 Monitoramento
+---
 
-O dashboard inclui:
-- Indicador de status da conexão (bolinha verde/vermelha)
-- Timestamp da última atualização
-- Mensagens de erro visíveis
-- Loading states durante atualizações
-- Logs detalhados no console do navegador
-
-## 🔐 Segurança
-
-- Token de API configurado via arquivo de configuração
-- Não exposição de credenciais no código
-- CORS configurado adequadamente
-- Validação de dados recebidos da API
+**Versão**: 2.0.0  
+**Última atualização**: Agosto 2025  
+**Deploy**: Render Static Site  
+**API**: https://stays-dashboard-api.onrender.com
